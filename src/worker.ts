@@ -24,7 +24,7 @@ export async function processMessage(ch: Channel, msg: ConsumeMessage): Promise<
     ch.ack(msg);
   } catch (err) {
     const retryCount = (msg.properties.headers?.[RETRY_HEADER] ?? 0) as number;
-    if (retryCount < MAX_RETRIES - 1) {
+    if (retryCount < MAX_RETRIES) {
       publishProduct(ch, payload, retryCount + 1);
       ch.ack(msg);
       console.warn(`Retry ${retryCount + 1}/${MAX_RETRIES} for sku=${payload.sku}`);

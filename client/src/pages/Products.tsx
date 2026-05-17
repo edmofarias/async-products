@@ -47,10 +47,17 @@ export default function Products() {
       limit: String(LIMIT),
     });
     fetch(`/api/products?${params}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((json: ApiResponse) => {
         setProducts(json.data);
         setTotal(json.total);
+      })
+      .catch(() => {
+        setProducts([]);
+        setTotal(0);
       })
       .finally(() => setLoading(false));
   }, [debouncedSearch, sort, page]);

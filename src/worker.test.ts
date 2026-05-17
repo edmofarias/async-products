@@ -72,9 +72,9 @@ describe('processMessage', () => {
     expect(mockNack).not.toHaveBeenCalled();
   });
 
-  it('NACK para DLQ quando retryCount atinge MAX_RETRIES - 1', async () => {
+  it('NACK para DLQ quando retryCount atinge MAX_RETRIES', async () => {
     vi.mocked(upsertProduct).mockImplementationOnce(() => { throw new Error('DB error'); });
-    const msg = makeMsg({ sku: 'A1', name: 'Camiseta', price: 49.9, category: 'Vestuário' }, 2);
+    const msg = makeMsg({ sku: 'A1', name: 'Camiseta', price: 49.9, category: 'Vestuário' }, 3);
     await processMessage(mockCh, msg);
     expect(publishProduct).not.toHaveBeenCalled();
     expect(mockNack).toHaveBeenCalledWith(msg, false, false);
