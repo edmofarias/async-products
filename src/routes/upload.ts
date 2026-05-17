@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
-import { upsertProduct } from '../db/index.js';
+import { getChannel, publishProduct } from '../services/queue.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -12,7 +12,7 @@ export const uploadRouter = Router();
 
 const REQUIRED_HEADERS = ['sku', 'name', 'price', 'category'];
 
-uploadRouter.post('/', upload.single('file'), (req: Request, res: Response) => {
+uploadRouter.post('/', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   }
@@ -44,6 +44,13 @@ uploadRouter.post('/', upload.single('file'), (req: Request, res: Response) => {
     });
   }
 
+  let ch;
+  try {
+    ch = await getChannel();
+  } catch {
+    return res.status(503).json({ error: 'Serviço de mensageria indisponível' });
+  }
+
   let queued = 0;
   const errors: string[] = [];
 
@@ -62,9 +69,9 @@ uploadRouter.post('/', upload.single('file'), (req: Request, res: Response) => {
       continue;
     }
 
-    upsertProduct(sku, name, price, category);
+    publishProduct(ch, { sku, name, price, category });
     queued++;
   }
 
-  res.status(202).json({ queued, errors });
+  return res.status(202).json({ queued, errors });
 });
