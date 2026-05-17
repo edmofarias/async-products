@@ -1,4 +1,16 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: async-products-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -14,6 +26,28 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - DB_PATH=/data/products.db
+      - AMQP_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: async-products-worker
+    command: ["npx", "tsx", "src/worker.ts"]
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+      - ./data:/data
+    environment:
+      - NODE_ENV=development
+      - DB_PATH=/data/products.db
+      - AMQP_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   web:
     build:
